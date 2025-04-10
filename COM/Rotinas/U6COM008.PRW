@@ -8,6 +8,7 @@ _____________________________________________________________________________
 ¦¦¦Programa  ¦ U6COM008  ¦ Autor ¦ Fábrica ERPBR    ¦   Data  ¦ Set-2023  ¦¦¦
 ¦¦+----------+------------------------------------------------------------¦¦¦
 ¦¦¦Descricao ¦ Carga de dados - Produtos.								  ¦¦¦
+¦¦¦          ¦ Mrp Memória - 21/11/2024.								  ¦¦¦
 ¦¦+----------+------------------------------------------------------------¦¦¦
 ¦¦¦Uso       ¦ Exclusivo INTRALOX 										  ¦¦¦
 ¦¦+----------+------------------------------------------------------------¦¦¦
@@ -48,7 +49,7 @@ If lOkFile
 		Return
 	Endif
 
-	If MsgYesNo("Confirma o processamento - Atualiza dados Produtos ?","Aviso","INFO")
+	If MsgYesNo("Confirma o processamento - Atualiza dados Produtos p/ MRP ?","Aviso","INFO")
 		oProcess := MsNewProcess():New( { | lEnd | lOk := ProcImp() }, "Atualizando dados", "Aguarde, processando ...", .F. )
 		oProcess:Activate()
 	Endif
@@ -104,44 +105,51 @@ While ( !Empty((cString := fReadFile(nHandle,nTamArq,0,@nBytes))) )
 	Enddo
 
 	// Estrutura de aLinha:
-	// [01] - Filial
-	// [02] - Código
-	// [03] - Lote Econômico
-	// [04] - Lote Mínimo
-	// [05] - Prazo Entrega
-	// [06] - Grupo2
-	// [07] - Estoque Segurança
-	// [08] - Preço Venda
+	// [01] - Código             | B1_COD
+	// [02] - Lote Econômico     | B1_LE
+	// [03] - Lote Mínimo        | B1_LM
+	// [04] - Prazo Entrega      | B1_PE
+	// [05] - Grupo2             | B1_ZZGRP2
+	// [06] - Estoque Segurança  | B1_ESTSEG
+	// [07] - Preço Venda        | B1_PRV1
+	// [08] - Ponto de Pedido    | B1_EMIN
+	// [09] - Qtd Embalagem      | B1_QE
+	// [10] - Atende necessidade | B1_PRODSBP | P=Produzindo C=Comprando
 
-	If Len(aLinha) == 7
-		AAdd(aLinha,"0.00")
-	Endif
-
-	If Len(aLinha) < 8
-		MsgInfo("Atenção..., Estrutura do arquivo CSV inválida na linha "+AllTrim(STR(nCountLin))+" ("+AllTrim(STR(Len(aLinha)))+" posições)."+cEOL+"O layout deve conter 8 posições.")
+	If Len(aLinha) < 10
+		MsgInfo("Atenção..., Estrutura do arquivo CSV inválida na linha "+AllTrim(STR(nCountLin))+" ("+AllTrim(STR(Len(aLinha)))+" posições)."+cEOL+"O layout deve conter 10 posições.")
 		Return
 	Endif
 	
 	If Len(aLinha) > 0
 
-		zFilial := aLinha[1]
-		zProdut := PadR(aLinha[2],15)
+		zProdut := PadR(aLinha[1],TamSx3("B1_COD")[1])
 
-		zLotEco := StrTran(aLinha[3],".","")
+		zLotEco := StrTran(aLinha[2],".","")
 		zLotEco := StrTran(zLotEco,",",".")
 		zLotEco := Val(zLotEco)
 
-		zLotMin := StrTran(aLinha[4],".","")
+		zLotMin := StrTran(aLinha[3],".","")
 		zLotMin := StrTran(zLotMin,",",".")
 		zLotMin := Val(zLotMin)
 
-		zPrzEnt := Val(aLinha[5])
-		zGrupo2 := PadR(aLinha[6],4)
-		zEstSeg := Val(aLinha[7])
+		zPrzEnt := Val(aLinha[4])
+		zGrupo2 := PadR(aLinha[5],TamSx3("BM_GRUPO")[1])
 
-		zPrcVen := StrTran(aLinha[8],".","")
+		zEstSeg := StrTran(aLinha[6],".","")
+		zEstSeg := StrTran(zEstSeg,",",".")
+		zEstSeg := Val(zEstSeg)
+
+		zPrcVen := StrTran(aLinha[7],".","")
 		zPrcVen := StrTran(zPrcVen,",",".")
 		zPrcVen := Val(zPrcVen)
+
+		zPontoP := StrTran(aLinha[8],".","")
+		zPontoP := StrTran(zPontoP,",",".")
+		zPontoP := Val(zPontoP)
+
+		zQtdEmb := Val(aLinha[9])
+		zAtende := IIf(aLinha[10]=="P","P","C")
 
 		DbSelectArea("SB1")
 		DbSetOrder(1)
@@ -161,25 +169,16 @@ While ( !Empty((cString := fReadFile(nHandle,nTamArq,0,@nBytes))) )
 		DbSetOrder(1)
 		If DbSeek( xFilial("SB1") + zProdut )
 			RecLock("SB1",.F.)
-			If zLotEco > 0
-				SB1->B1_LE := zLotEco
-			Endif
-			If zLotMin > 0
-				SB1->B1_LM := zLotMin
-			Endif
-			If zPrzEnt > 0
-				SB1->B1_PE := zPrzEnt
-				SB1->B1_TIPE := "D"
-			Endif
-			If !Empty(zGrupo2)
-				SB1->B1_ZZGRP2 := zGrupo2
-			Endif
-			If zEstSeg > 0
-				SB1->B1_ESTSEG := zEstSeg
-			Endif
-			If zPrcVen > 0
-				SB1->B1_PRV1 := zPrcVen
-			Endif
+			SB1->B1_LE      := zLotEco
+			SB1->B1_LM      := zLotMin
+			SB1->B1_PE      := zPrzEnt
+			SB1->B1_TIPE    := "D"
+			SB1->B1_ZZGRP2  := zGrupo2
+			SB1->B1_ESTSEG  := zEstSeg
+			SB1->B1_PRV1    := zPrcVen
+			SB1->B1_EMIN    := zPontoP
+			SB1->B1_QE      := zQtdEmb
+			SB1->B1_PRODSBP := zAtende
 			MsUnLock()
 		Endif
 

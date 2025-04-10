@@ -177,8 +177,13 @@ While ( !Empty((cString := fReadFile(nHandle,nTamArq,0,@nBytes))) )
 		Else
 			cInsep := ""
 		Endif
+		cSourc := Upper(AllTrim(aLinha[8]))
+		cPhant := Upper(AllTrim(aLinha[16]))
+		If cPhant == "YES" .And. cSourc == "BUY"
+			Loop
+		Endif
 		cProdu := PadR(AllTrim(aLinha[2]),TamSx3("B1_COD")[1])
-		cModel := AllTrim(aLinha[9])
+		cModel := Upper(AllTrim(aLinha[9]))
 		If !(Substr(cProdu,1,4) $("DPP-,BELT,DPE-"))
 			Loop
 		Endif
@@ -189,7 +194,7 @@ While ( !Empty((cString := fReadFile(nHandle,nTamArq,0,@nBytes))) )
 			SB1->B1_LOCPAD := "01"
 			SB1->B1_CONTA  := IIf(SB1->B1_TIPO=="PA" .Or. Substr(SB1->B1_COD,1,3)=="DPE","311101030","113170002")
 			MsUnLock()
-			If cModel == "Inseparable"
+			If (cModel == "INSEPARABLE") .Or. (cSourc == "BUY")
 				cInsep := AllTrim(STR(Val(cNivel)+1))
 			Endif
 			Loop
@@ -197,7 +202,9 @@ While ( !Empty((cString := fReadFile(nHandle,nTamArq,0,@nBytes))) )
 		cDescr := AllTrim(aLinha[4])
 		cDescr := u_ConvDescr(cDescr)
 		If AT("SOFTWARE",Upper(cDescr)) > 0
-			Loop
+			If cSourc <> "BUY"
+				Loop
+			Endif	
 		Endif
 		nCount += 1
 		cTipoP := IIf(AT("DPE210",Upper(cDescr)) > 0,"PA","PI")
@@ -244,13 +251,13 @@ While ( !Empty((cString := fReadFile(nHandle,nTamArq,0,@nBytes))) )
 			TMP->TM_P_TIP   := "1"
 			TMP->TM_PRVALID := 0
 			TMP->TM_EMAX    := 0
-			TMP->TM_PRODSBP := IIf(cModel=="Separable","P","C")
-			TMP->TM_DESCR02 := cDescr
+			TMP->TM_PRODSBP := IIf(cModel=="SEPARABLE","P","C")
+			TMP->TM_DESCR01 := cDescr
 			TMP->TM_ZZGRP2  := cGrup2
 			TMP->TM_SEQUEN  := StrZero(nCount,4)
 			MsUnLock()
 		Endif
-		If cModel == "Inseparable"
+		If (cModel == "INSEPARABLE") .Or. (cSourc == "BUY")
 			cInsep := AllTrim(STR(Val(cNivel)+1))
 		Endif
 	Endif
@@ -286,7 +293,7 @@ If nHdlSB1 < 0
 Endif
 
 // Cabeçalho do arquivo
-cTexto := "B1_COD;B1_DESC;B1_TIPO;B1_UM;B1_LOCPAD;B1_GRUPO;B1_ORIGEM;B1_QE;B1_EMIN;B1_ESTSEG;B1_PE;B1_TIPE;B1_LE;B1_LM;B1_TOLER;B1_MRP;B1_CONTA;B1_POSIPI;B1_P_TIP;B1_PRVALID;B1_EMAX;B1_PRODSBP;B1_DESCR02;B1_ZZGRP2"+ENTER
+cTexto := "B1_COD;B1_DESC;B1_TIPO;B1_UM;B1_LOCPAD;B1_GRUPO;B1_ORIGEM;B1_QE;B1_EMIN;B1_ESTSEG;B1_PE;B1_TIPE;B1_LE;B1_LM;B1_TOLER;B1_MRP;B1_CONTA;B1_POSIPI;B1_P_TIP;B1_PRVALID;B1_EMAX;B1_PRODSBP;B1_DESCR01;B1_ZZGRP2"+ENTER
 fWrite(nHdlSB1,cTexto)
 
 DbSelectArea("TMP")
@@ -298,7 +305,7 @@ While !Eof()
 			  AllTrim(STR(TMP->TM_EMIN))+";"+AllTrim(STR(TMP->TM_ESTSEG))+";"+AllTrim(STR(TMP->TM_PE))+";"+AllTrim(TMP->TM_TIPE)+";"+;
 			  AllTrim(STR(TMP->TM_LE))+";"+AllTrim(STR(TMP->TM_LM))+";"+AllTrim(STR(TMP->TM_TOLER))+";"+AllTrim(TMP->TM_MRP)+";"+;
 			  AllTrim(TMP->TM_CONTA)+";"+AllTrim(TMP->TM_POSIPI)+";"+AllTrim(TMP->TM_P_TIP)+";"+AllTrim(STR(TMP->TM_PRVALID))+";"+;
-			  AllTrim(STR(TMP->TM_EMAX))+";"+AllTrim(TMP->TM_PRODSBP)+";"+AllTrim(TMP->TM_DESCR02)+";"+AllTrim(TMP->TM_ZZGRP2)+ENTER
+			  AllTrim(STR(TMP->TM_EMAX))+";"+AllTrim(TMP->TM_PRODSBP)+";"+AllTrim(TMP->TM_DESCR01)+";"+AllTrim(TMP->TM_ZZGRP2)+";"+ENTER
 	fWrite(nHdlSB1,cTexto)
 	TMP->(DbSkip())
 Enddo
@@ -396,6 +403,13 @@ While ( !Empty((cString := fReadFile(nHandle,nTamArq,0,@nBytes))) )
 		Endif
 		cDescr := AllTrim(aLinha[4])
 		If AT("SOFTWARE",Upper(cDescr)) > 0
+			If cSourc <> "BUY"
+				Loop
+			Endif	
+		Endif
+		cPhant := Upper(AllTrim(aLinha[16]))
+		cSourc := Upper(AllTrim(aLinha[8]))
+		If cPhant == "YES" .And. cSourc == "BUY"
 			Loop
 		Endif
 		nCount += 1
@@ -411,7 +425,7 @@ While ( !Empty((cString := fReadFile(nHandle,nTamArq,0,@nBytes))) )
 		If lMilim
 			nQuant := (nQuant / 1000)
 		Endif
-		cModel := AllTrim(aLinha[9])
+		cModel := Upper(AllTrim(aLinha[9]))
 		If !(Substr(cProdu,1,4) $("DPP-,BELT")) .And. Len(AllTrim(cProdu)) == 12
 			cProdu := u_VersaoSb1(AllTrim(cProdu))
 		Endif
@@ -455,7 +469,7 @@ While ( !Empty((cString := fReadFile(nHandle,nTamArq,0,@nBytes))) )
 		TMP->TM_QUANT += nQuant
 		MsUnLock()
 
-		If cModel == "Inseparable"
+		If (cModel == "INSEPARABLE") .Or. (cSourc == "BUY")
 			cInsep := AllTrim(STR(Val(cNivel)+1))
 		Endif
 
@@ -566,7 +580,7 @@ AAdd ( _aTmp, {"TM_P_TIP"  , "C", 001, 00} )
 AAdd ( _aTmp, {"TM_PRVALID", "N", 005, 00} )
 AAdd ( _aTmp, {"TM_EMAX"   , "N", 005, 00} )
 AAdd ( _aTmp, {"TM_PRODSBP", "C", 001, 00} )
-AAdd ( _aTmp, {"TM_DESCR02", "C", 250, 00} )
+AAdd ( _aTmp, {"TM_DESCR01", "C", 250, 00} )
 AAdd ( _aTmp, {"TM_ZZGRP2" , "C", 004, 00} )
 AAdd ( _aTmp, {"TM_SEQUEN" , "C", 004, 00} )
 
