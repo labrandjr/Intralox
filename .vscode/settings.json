@@ -1,0 +1,5 @@
+{
+    "totvsLanguageServer.welcomePage": false,
+    "totvsLanguageServer.editor.linter.includes": "C:\\Totvs\\Protheus\\Protheus\\include;C:\\Totvs\\Protheus\\Protheus\\include afip",
+    "totvsLanguageServer.askCompileResult": false
+}

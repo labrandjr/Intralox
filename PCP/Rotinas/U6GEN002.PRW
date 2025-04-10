@@ -679,7 +679,7 @@ For nX:=1 To Len(aDadosItem)
        If lMsErroAuto
 
 			cErroCon	:= ""
-			aAutoErro 	:= GETAUTOGRLOG()
+			aAutoErro 	:= GetAutoGrLog()
 	    	cErroCon	:= SubStr(XLOG(aAutoErro),1,100 )
 	   
 			AAdd(aLogErros,{"Produto",cCodProd,cMens+"-"+Iif(Empty(cErroCon),"erro não identificado",cErroCon),cArq,nLinha})
@@ -704,7 +704,7 @@ For nX:=1 To Len(aDadosItem)
 	   If lMsErroAuto
 
 			cErroCon	:= ""
-			aAutoErro 	:= GETAUTOGRLOG()
+			aAutoErro 	:= GetAutoGrLog()
 	    	cErroCon	:= SubStr(XLOG(aAutoErro),1,100 )
 	   
 			AAdd(aLogErros,{"Produto",cCodProd,cMens+"-"+Iif(Empty(cErroCon),"erro não identificado",cErroCon),cArq,nLinha})
