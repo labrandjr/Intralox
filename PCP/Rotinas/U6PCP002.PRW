@@ -463,11 +463,17 @@ While ( !Empty((cString := fReadFile(nHandle,nTamArq,0,@nBytes))) )
 			TMP->TM_PRODUT := cProdu
 			TMP->TM_CODPAI := cCodPai
 			TMP->TM_SEQUEN := StrZero(nCount,4)
+			TMP->TM_QUANT  := nQuant
+			MsUnLock()
 		Else
-			RecLock("TMP",.F.)
+			If Empty(cCodPai)
+				RecLock("TMP",.F.)
+				TMP->TM_QUANT += nQuant
+				MsUnLock()
+			Endif	
 		Endif
-		TMP->TM_QUANT += nQuant
-		MsUnLock()
+		//TMP->TM_QUANT += nQuant
+		//MsUnLock()
 
 		If (cModel == "INSEPARABLE") .Or. (cSourc == "BUY")
 			cInsep := AllTrim(STR(Val(cNivel)+1))
