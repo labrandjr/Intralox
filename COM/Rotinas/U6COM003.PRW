@@ -37,6 +37,7 @@ Private cMailFor := Space(100)
 Private cMailRec := Space(100)
 Private cMailPcp := Space(100)
 Private cMailCop := Space(100)
+Private cMailCom := Space(100)
 Private oSayCod,oSayNom,oSayNew
 
 If !(FWCodEmp() $("99,U6"))
@@ -56,6 +57,7 @@ If !Empty(SA2->A2_EMAIL)
 		cMailPcp := PadR( AllTrim(SA2->A2_ZEMLPCP), 100 )
 	Endif
 Endif
+cMailCom := PadR( AllTrim( SuperGetMV( "MV_U6EMLCP", .F., "comprasbrasil@intralox.com" ) ), 100 )
 
 oFnt1 := TFont():New("Tahoma",,23,,.T.)
 oFnt2 := TFont():New("Tahoma",,12,,.T.)
@@ -65,10 +67,10 @@ oFntM := TFont():New("Tahoma",,11,,.F.)
 
 nDlg1 := 001
 nDlg2 := 001
-nDlg3 := 210
+nDlg3 := 240
 nDlg4 := 700
 
-oDlg410 := MsDialog():New(nDlg1,nDlg2,nDlg3,nDlg4,"Pedido de Compra "+SC7->C7_NUM,,,,,CLR_BLACK,CLR_WHITE,,,.T.)
+oDlg410 := MsDialog():New(nDlg1,nDlg2,nDlg3,nDlg4,"Pedido de Compra "+SC7->C7_NUM,,,,,,,,,.T.)
 
 @ 040,005 SAY "E-Mail Fornecedor" OF oDlg410 PIXEL SIZE 055,009
 @ 039,060 MSGET oMailFor VAR cMailFor SIZE 250,010 OF oDlg410 PIXEL PICTURE "@X"
@@ -79,8 +81,11 @@ oDlg410 := MsDialog():New(nDlg1,nDlg2,nDlg3,nDlg4,"Pedido de Compra "+SC7->C7_NU
 @ 070,005 SAY "E-Mail PCP" OF oDlg410 PIXEL SIZE 055,009
 @ 069,060 MSGET oCopia2 VAR cMailPcp SIZE 250,010 OF oDlg410 PIXEL PICTURE "@X"
 
-@ 085,005 SAY "Cópia" OF oDlg410 PIXEL SIZE 055,009
-@ 084,060 MSGET oCopia3 VAR cMailCop SIZE 250,010 OF oDlg410 PIXEL PICTURE "@X"
+@ 085,005 SAY "E-Mail Compras" OF oDlg410 PIXEL SIZE 055,009
+@ 084,060 MSGET oCopia4 VAR cMailCom SIZE 250,010 OF oDlg410 PIXEL PICTURE "@X"
+
+@ 100,005 SAY "Cópia" OF oDlg410 PIXEL SIZE 055,009
+@ 099,060 MSGET oCopia3 VAR cMailCop SIZE 250,010 OF oDlg410 PIXEL PICTURE "@X"
 
 oDlg410:Activate(,,,.T.,{|| ValidEml() },,{|| EnchoiceBar(oDlg410,bOk410,bCan410) } )
 
@@ -120,6 +125,9 @@ ElseIf !Empty(cMailPcp) .And. AT("@",cMailPcp) == 0
 	lRetOk := .F.
 ElseIf !Empty(cMailCop) .And. AT("@",cMailCop) == 0
 	MsgAlert("E-Mail inválido - Cópia")
+	lRetOk := .F.
+ElseIf !Empty(cMailCom) .And. AT("@",cMailCom) == 0
+	MsgAlert("E-Mail inválido - Compras")
 	lRetOk := .F.
 Endif
 
@@ -184,11 +192,11 @@ AAdd(aMensage, "Endereço de Entrega (CIF) *PRÉDIO ARB*")
 AAdd(aMensage, "Rua Alberto Guizo, 121 - Distrito Industrial João Narezzi")
 AAdd(aMensage, "CEP 13347-402 - Indaiatuba/SP")
 AAdd(aMensage, "Contatos:")
-AAdd(aMensage, "Compras / Débora Santana: comprasbrasil@intralox.com - (19) 9 9711-9570")
-AAdd(aMensage, "Recebimento / Vitória: recebimentobrasil@intralox.com")
+AAdd(aMensage, "Compras / Matheus Dantas: comprasbrasil@intralox.com - (19) 9 7129-8860")
+AAdd(aMensage, "Recebimento / Ruan Morais: recebimentobrasil@intralox.com")
 AAdd(aMensage, "Horário de Recebimento:")
-AAdd(aMensage, "De segunda a quinta das 7h30 às 11h00 e 13h00 às 16h30")
-AAdd(aMensage, "De sexta das 7h30 às 11h00 e 13h00 às 15h30")
+AAdd(aMensage, "De segunda a quinta das 7h30 às 11h30 e 13h00 às 16h30")
+AAdd(aMensage, "De sexta das 7h30 às 11h30 e 13h00 às 15h30")
 AAdd(aMensage, "CONDIÇÕES COMERCIAIS: VIDE PEDIDO ANEXO (PDF)")
 
 zCopias := ""
@@ -201,9 +209,12 @@ Endif
 If !Empty(cMailCop)
 	zCopias += IIf(!Empty(zCopias),";","") + AllTrim(cMailCop)
 Endif
+If !Empty(cMailCom)
+	zCopias += IIf(!Empty(zCopias),";","") + AllTrim(cMailCom)
+Endif
 
 zEmail  := AllTrim(cMailFor)
-zCopOcu := IIf( FWCodEmp() == "U6", "comprasbrasil@intralox.com", "" )
+zCopOcu := ""
 zResult := U_TMAILMNG(zEmail, cAssunto, aMensage, zAttach, zCopias, zCopOcu)
 
 fErase(zAttach)
@@ -230,16 +241,18 @@ User Function TMAILMNG(zEmail, zAssunto, aMensage, zAttach, zCopias, zCopOcu)
 
 Local oServer
 Local oMessage
-Local zSmtp     := Alltrim(GetMv("MV_RELSERV"))
+Local zSmtp     := Alltrim(GetMv("MV_RELSERV")) // Nome do Servidor de Envio de E-mail utilizado nos relatorios
 Local nPosPort  := AT(":",zSmtp)
-Local zServer	:= Substr(zSmtp, 1, nPosPort-1 )
-Local zPorta    := Val(Substr(zSmtp, nPosPort+1, Len(zSmtp)-nPosPort))
-Local zAccount  := Alltrim(GetMv("MV_RELACNT"))
-Local zPassword := Alltrim(GetMv("MV_RELAPSW"))
-Local zEmlFrom  := Alltrim(GetMv("MV_RELFROM"))
-Local lAuth     := GetMv("MV_RELAUTH")
-Local lSSL      := GetMv("MV_RELSSL")
-Local lTLS      := GetMv("MV_RELTLS")
+Local zServer	:= IIf(nPosPort > 0, Substr(zSmtp,1,nPosPort-1), zSmtp)
+Local zPorta    := IIf(nPosPort > 0, Val(Substr(zSmtp, nPosPort+1, Len(zSmtp)-nPosPort)), 587)
+Local zAccount  := Alltrim(GetMv("MV_RELACNT")) // Conta a ser utilizada no envio de E-Mail para os relatorios
+Local zPassword := Alltrim(GetMv("MV_RELPSW"))  // Senha da Conta de E-Mail para envio de relatorios 
+Local lUseAuth	:= GetMv("MV_RELAUTH") // Servidor de E-Mail necessita de Autenticacao ?
+Local zUserAuth := Alltrim(GetMv("MV_RELAUSR")) // Usuario para Autenticacao no Servidor de E-Mail
+Local zPassAuth := Alltrim(GetMv("MV_RELAPSW")) // Senha para autenticacao no servidor de E-Mail
+Local zEmlFrom  := Alltrim(GetMv("MV_RELFROM")) // E-mail utilizado no campo FROM no envio de relatorios por E-mail
+Local lUseSSL   := GetMv("MV_RELSSL")
+Local lUseTLS   := GetMv("MV_RELTLS")
 Local zResult   := "E-mail enviado com sucesso."
 Local zBody     := ""
 Local zMsgFim   := "Por favor não responda essa mensagem. Esse é um e-mail automático."
@@ -268,9 +281,7 @@ zBody += '<p>'
 zBody += '<DIV><FONT face=Verdana color=#ff0000 size=2><SPAN class=216593018-10022004>' + zMsgFim + '</SPAN></FONT></DIV><p>'
 
 oMessage := TMailMessage():New()
-
 oMessage:Clear()
-
 oMessage:cFrom    := zEmlFrom
 oMessage:cTo      := zEmail
 oMessage:cCc      := zCopias
@@ -286,15 +297,8 @@ If oMessage:AttachFile(zAttach) < 0
 Endif
 
 oServer := TMailManager():New()
-
-If lSSL
-	oServer:SetUseSSL(.T.)
-Endif	
-
-If lTLS
-	oServer:SetUseTLS(.T.)
-Endif	
-  
+oServer:SetUseSSL(lUseSSL)
+oServer:SetUseTLS(lUseTLS)
 oServer:Init("", zServer, zAccount, zPassword, 0, zPorta)
 
 zRet := oServer:SetSmtpTimeOut(60)
@@ -313,8 +317,8 @@ If zRet != 0
 	Return(zResult)
 Endif
 
-If lAuth
-	zRet := oServer:SmtpAuth(zAccount, zPassword)
+If lUseAuth
+	zRet := oServer:SmtpAuth(zUserAuth, zPassAuth)
 	If zRet != 0
 		zMsgRet := "Falha na autenticação do servidor smtp: "+oServer:GetErrorString(zRet)
 		MsgAlert(zMsgRet)

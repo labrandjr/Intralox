@@ -23,7 +23,7 @@ Local aButtons := {}
 
 If FWCodEmp() $("99,U6")
     AAdd(aButtons,{"RPMCPO", {|| A150Check() },"Replicar dados", "Replicar dados"})
-Endif    
+Endif
 
 Return(aButtons)
 
@@ -31,7 +31,7 @@ Return(aButtons)
 _____________________________________________________________________________
 ¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦
 ¦¦+-----------------------------------------------------------------------+¦¦
-¦¦¦Programa  ¦ MA150BUT  ¦ Autor ¦ Fábrica ERPBR    ¦   Data  ¦ Jun/2023  ¦¦¦
+¦¦¦Programa  ¦ A150Check ¦ Autor ¦ Fábrica ERPBR    ¦   Data  ¦ Jun/2023  ¦¦¦
 ¦¦+----------+------------------------------------------------------------¦¦¦
 ¦¦¦Descricao ¦ Adiciona botões na cotação.          					  ¦¦¦
 ¦¦+----------+------------------------------------------------------------¦¦¦
@@ -59,7 +59,7 @@ nDlg2 := 001
 nDlg3 := 200
 nDlg4 := 376
 
-oDlgChk := MsDialog():New(nDlg1,nDlg2,nDlg3,nDlg4,"Selecione as colunas",,,,,CLR_BLACK,CLR_WHITE,,,.T.)
+oDlgChk := MsDialog():New(nDlg1,nDlg2,nDlg3,nDlg4,"Selecione as colunas",,,,,,,,,.T.)
 
 @ 035,005 TO 090,185 LABEL "" OF oDlgChk PIXEL
 oCheck1 := TCheckBox():New(045,010,"Tab.Preço"    ,{|u|IIf(PCount()>0,lCheck1:=u,lCheck1)},oDlgChk,100,210,,,,,,,,.T.,,,)
@@ -70,7 +70,7 @@ oCheck4 := TCheckBox():New(075,010,"Aliq. ICMS"   ,{|u|IIf(PCount()>0,lCheck4:=u
 oDlgChk:Activate(,,,.T.,{|| _VldCheck() },,{|| EnchoiceBar(oDlgChk,bOkChk,bCanChk) } )
 
 If nOpcChk == 1
-    A150Replica(lCheck1, lCheck2, lCheck3, lCheck4)
+    FwMsgRun(, { || A150Replica(lCheck1, lCheck2, lCheck3, lCheck4) },,"Replicando dados... aguarde")
 Endif
 
 Return

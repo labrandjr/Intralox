@@ -242,10 +242,7 @@ oTButton := TButton():New( 25, 295, "...",oLocal,{||fAbreCSV(@cLocaSB1,oGetSB1)}
 oGetSB1:Disable()
 
 @ 60,10 Say "Project" SIZE 150,10 OF oLocal PIXEL
- oGetProd := TGet():New( 58, 030, { | u | If( PCount() == 0, cCodSb1, cCodSb1 := u ) },oLocal, 060, 010, "@!",, 0, 16777215,,.F.,,.T.,,.F.,,.F.,.F.,,.F.,.F. ,"SB1","cCodSb1",,,,  )
-//oGet1 := TGet():New( 028,076,bSetGet(_cProd),oDlg1,060,008,'@!',{||If(PCount()>0,U_XVERIF(_cProd,1),"")},CLR_BLACK,CLR_WHITE,,,,.T.,"",,,.F.,.F.,,.F.,.F.,"SB1","_cProd",,)	 
-
-//----------------------------------------
+oGetProd := TGet():New( 58, 030, { | u | If( PCount() == 0, cCodSb1, cCodSb1 := u ) },oLocal, 060, 010, "@!",, 0, 16777215,,.F.,,.T.,,.F.,,.F.,.F.,,.F.,.F. ,"SB1","cCodSb1",,,,  )
 
 oChkProc := TCheckBox():New(77,10,'',,oLocal,100,210,,,,,,,,.T.,,,)
 oChkProc:bSetGet := {|| lChkSGG }
@@ -370,14 +367,13 @@ Static Function TlProd(oLocal)
 Local oBrowP
 
 // Define o Browse	
-DEFINE FWBROWSE oBrowP DATA TABLE ALIAS "TRBSB1" OF oLocal			
+DEFINE FWBROWSE oBrowP DATA TABLE ALIAS "TRBSB1" OF oLocal
 
 //Adiciona coluna para marcar e desmarcar
-ADD MARKCOLUMN 		oColumn DATA { || If(LSTATUS,"BR_VERDE","BR_VERMELHO") } DOUBLECLICK { |oBrowP| /* Função que atualiza a regra*/ }  OF oBrowP
+ADD MARKCOLUMN oColumn DATA { || If(LSTATUS,"BR_VERDE","BR_VERMELHO") } DOUBLECLICK { |oBrowP| /* Função que atualiza a regra*/ }  OF oBrowP
 
 // Adiciona as colunas do Browse	   	
 ADD COLUMN oColumn DATA { || ID			} TITLE "Código"   			DOUBLECLICK  {||  			}	ALIGN 1 SIZE 06 OF oBrowP		
-//ADD COLUMN oColumn DATA { || TAB	   	} TITLE "Tabela"			DOUBLECLICK  {||  			}	ALIGN 1 SIZE 3 OF oBrowP		
 ADD COLUMN oColumn DATA { || USUARIO   	} TITLE "Usuário"			DOUBLECLICK  {||  			}	ALIGN 1 SIZE 20 OF oBrowP		
 ADD COLUMN oColumn DATA { || DATAGE    	} TITLE "Data"				DOUBLECLICK  {|| 			} 	ALIGN 1 SIZE 08 OF oBrowP	
 ADD COLUMN oColumn DATA { || HORA    	} TITLE "Hora"				DOUBLECLICK  {|| 			} 	ALIGN 1 SIZE 10 OF oBrowP	
@@ -426,21 +422,6 @@ Return
 *----------------------------------------*
 Static Function LeArqDPE(cArq,cTab,cTab2)
 *----------------------------------------*
-//Local oFT   	:= FT():New()
-//Local cLinha	:= ""
-//Local cToken	:= ";"
-//Local aLinha	:= {}
-//Local nTotLin	:= 0
-//Local lErro		:= .F.
-//Local lCrt		:= .F.
-//Local lTemDup   := .F.   
-//Local cTemDup   := "" 
-//Local aCampos	:= {}
-//Local nPos		:= 0
-//Local lCpoFal	:=.F.
-//Local aCpoObrigat	:= {} 
-//Local cCpoFaltantes :=""
-//Local nHdle		:= 0
 Local aColunas  :={}
 Local aDadosCSV :={}
 Local aDadosItem:={}

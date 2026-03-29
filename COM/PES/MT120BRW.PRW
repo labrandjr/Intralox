@@ -20,6 +20,7 @@ User Function MT120BRW()
 
 If FWCodEmp() $("99,U6")
     AAdd(aRotina, {"E-Mail Pedido", "U_U6COM003()", 0, 4})
+    AAdd(aRotina, {"Importar Pedido", "U_U6CSVSC7()", 0, 4})
 Endif    
 
 Return

@@ -1,0 +1,413 @@
+#INCLUDE "PROTHEUS.CH"
+
+/* ---------------------------------------------------------------------------------------------------------
+Função		: U6Matr920Excel
+Descrição	: Função para gerar planilha Excel com dados do fiscal. Exclusivo Intralox
+Criação		: 21/08/2024
+Autor		: Guilherme Leonel
+------------------------------------------------------------------------------------------------------------
+Atualizações
+	21/08/2024 - Guilherme Leonel - Construção inicial do fonte
+--------------------------------------------------------------------------------------------------------- */
+
+STATIC lIntraloxU6 := (cEmpAnt == "U6" .AND. ("P12_03" $ UPPER(ALLTRIM(GETENVSERVER())) .OR. "EMERGENCIA_" $ UPPER(ALLTRIM(GETENVSERVER()))))
+
+USER FUNCTION U6Matr920Excel()
+    LOCAL aArea := GETAREA()
+
+    IF lIntraloxU6 //.AND. FILE("C:\Temp\U6Matr920Excel.perm")
+        U6Matr920Excel()
+    ELSE
+        FWAlertError("Sem acesso para executar essa Rotina!","ERRO")
+    ENDIF
+
+    RESTAREA(aArea)
+RETURN
+
+/* ---------------------------------------------------------------------------------------------------------
+Função    : U6Matr920Excel
+Descrição : Faz a chamada dos parametros e executa o processamento
+--------------------------------------------------------------------------------------------------------- */
+STATIC FUNCTION U6Matr920Excel()
+    LOCAL aRet   := {}
+    LOCAL aPBox  := {}
+    LOCAL tamGet := 90
+
+    AADD(aPBox,{1,"Digitação Inicial" ,FIRSTDAY(DDATABASE),"D","","","",tamGet,.F.})
+    AADD(aPBox,{1,"Digitação Final"   ,LASTDAY(DDATABASE),"D","","","",tamGet,.F.})
+    AADD(aPBox,{2,"Tipo de Notas"     ,1, {"1=Entrada", "2=Saída"}, tamGet, ".T.", .F.})
+
+    IF PARAMBOX(aPBox,'Intralox - Relatório Excel',@aRet,{|| .T. },,,,,,FUNNAME(),.T.,.T.)
+        // AJUSTA O PARAMETRO DA COMBO PARA DEIXAR COMO NUMERICO
+        IF !VALTYPE(aRet[03]) == "N"
+            aRet[03] := VAL(LEFT(aRet[03],1))
+        ENDIF
+
+        FWMSGRUN(,{|oMessage| GeraPlanilha(oMessage,aRet) },"Gerando Relatório Customizado...","Aguarde...")
+    ELSE
+        FWALERTINFO("Geração do relatório cancelada.", "[INFO]")
+    ENDIF
+RETURN
+
+/* ---------------------------------------------------------------------------------------------------------
+Função    : GeraPlanilha
+Descrição : Define os dados de configuracao e os dados da query para a funcao GeraPython
+--------------------------------------------------------------------------------------------------------- */
+STATIC FUNCTION GeraPlanilha(oMessage,aParam)
+    LOCAL jDados := JsonObject():New()
+
+    jDados["tipoMov"] := aParam[03]
+
+    // precisa ter 30 itens em todos os arrays
+
+    jDados["campos"] := {"FT_FILIAL","FT_ENTRADA","FT_EMISSAO","FT_NFISCAL","FT_SERIE","FT_ESPECIE","FT_CLIEFOR","FT_LOJA","RSOCIAL","CGC","FT_ESTADO",;
+                        "FT_VALCONT","FT_CFOP",;
+                        "FT_BASEICM","FT_ALIQICM","FT_VALICM","FT_ISENICM","FT_OUTRICM",;
+                        "FT_BASEIPI","FT_ALIQIPI","FT_VALIPI","FT_ISENIPI","FT_OUTRIPI",;
+                        "FT_CHVNFE","FT_ITEM","FT_PRODUTO","FT_TES","CONTACTB","FT_CONTA","CCUSTO"}
+
+    jDados["header"]  := {"filial","data_entrada","data_emissao","nota","serie","especie","cliente_forn","loja","nome","cpf_cnpj","uf",;
+                          "valor_contabil", "cfop",;
+                          "base_icms", "aliq_icms", "valor_icms", "icms_isento", "icms_outros",;
+                          "base_ipi", "aliq_ipi", "valor_ipi", "ipi_isento", "ipi_outros",;
+                          "chave_nfe", "item", "codigo_produto", "tes", "conta_cliente_forn","conta_receita_despesa","centro_custo"}
+
+    jDados["formato"] := {"str","dt","dt","str","str","str","str","str","str","str","str",;
+                          "vl02","str",;
+                          "vl02","vl02","vl02","vl02","vl02",;
+                          "vl02","vl02","vl02","vl02","vl02",;
+                          "str","str","str","str","str","str","str"}
+
+    jDados["itens"]   := BuscaDados(aParam)
+
+    IF LEN(jDados["itens"]) > 0
+        GeraPython(jDados)
+    ELSE
+        FWALERTERROR("A consulta nao retornou dados.", "[ERRO] Sem Dados")
+    ENDIF
+
+     _stopDebug_ := .T.
+RETURN
+
+/* ---------------------------------------------------------------------------------------------------------
+Função    : GeraPython
+Descrição : Faz a criacao dos scripts para geracao da planilha
+--------------------------------------------------------------------------------------------------------- */
+STATIC FUNCTION GeraPython(jDados)
+    LOCAL L           := 0
+    LOCAL C           := 0
+    LOCAL _coluna     := ""
+    LOCAL _uuid       := FWUUIDV4()
+    LOCAL _script     := ""
+    LOCAl _pythonPath := "E:\TOTVS\Tools\@python_3.12\python.exe"
+    LOCAl _rootPath   := GetSrvProfString("RootPath","")
+    LOCAL _scriptPath := "\@pythonxlsx\u6\"
+    LOCAL _pastaExcel := "c:\temp\"
+
+    LOCAL _xlsxFile   := _scriptPath + _uuid + ".xlsx"
+    LOCAL _batFile    := _scriptPath + _uuid + ".bat"
+    LOCAL _pyFile     := _scriptPath + _uuid + ".py"
+    LOCAL _userFile   := ""
+
+    IF !EXISTDIR(_scriptPath)
+        FWMAKEDIR(_scriptPath)
+    ENDIF
+    
+    IF !EXISTDIR(_pastaExcel)
+        FWMAKEDIR(_pastaExcel)
+
+        IF !EXISTDIR(_pastaExcel)
+            _pastaExcel := GETTEMPPATH()
+        ENDIF
+    ENDIF
+
+    IF jDados["tipoMov"] == 1
+        _userFile := _pastaExcel + "relatorio_fiscal_entradas_gerado_em_" + STRTRAN(FWTIMESTAMP(3),":","") + ".xlsx"
+    ELSE
+        _userFile := _pastaExcel + "relatorio_fiscal_saidas_gerado_em_" + STRTRAN(FWTIMESTAMP(3),":","") + ".xlsx"
+    ENDIF
+
+    // -----------------------------------------------------------------------------------
+	// GERA O SCRIPT PYTHON
+	// -----------------------------------------------------------------------------------
+    _script += 'import datetime' + CRLF
+    _script += 'import xlsxwriter' + CRLF
+    _script += CRLF
+    _script += 'workbook = xlsxwriter.Workbook(r"' + _rootPath + _xlsxFile + '", {"constant_memory": True})' + CRLF
+    _script += CRLF
+
+    IF jDados["tipoMov"] == 1
+        _script += 'worksheet = workbook.add_worksheet("estoque_entradas")' + CRLF
+    ELSE
+        _script += 'worksheet = workbook.add_worksheet("estoque_saidas")' + CRLF
+    ENDIF
+
+    _script += 'worksheet.hide_gridlines(2)' + CRLF
+    _script += CRLF
+    _script += 'titulos = workbook.add_format()' + CRLF
+    _script += 'titulos.set_bold()' + CRLF
+    _script += 'titulos.set_border(1)' + CRLF
+    _script += 'titulos.set_border_color("#BFBFBF")' + CRLF
+    _script += 'titulos.set_font_size(11)' + CRLF
+    _script += 'titulos.set_font_name("Calibri")' + CRLF
+    _script += 'titulos.set_bg_color("#E7E6E6")' + CRLF
+    _script += CRLF
+    _script += 'dt = workbook.add_format()' + CRLF
+    _script += 'dt.set_border(1)' + CRLF
+    _script += 'dt.set_border_color("#BFBFBF")' + CRLF
+    _script += 'dt.set_font_size(11)' + CRLF
+    _script += 'dt.set_font_name("Calibri")' + CRLF
+    _script += 'dt.set_num_format("dd/mm/yyyy")' + CRLF
+    _script += CRLF
+    _script += 'str = workbook.add_format()' + CRLF
+    _script += 'str.set_border(1)' + CRLF
+    _script += 'str.set_border_color("#BFBFBF")' + CRLF
+    _script += 'str.set_font_size(11)' + CRLF
+    _script += 'str.set_font_name("Calibri")' + CRLF
+    _script += CRLF
+    _script += 'vl00 = workbook.add_format()' + CRLF
+    _script += 'vl00.set_border(1)' + CRLF
+    _script += 'vl00.set_border_color("#BFBFBF")' + CRLF
+    _script += 'vl00.set_font_size(11)' + CRLF
+    _script += 'vl00.set_font_name("Calibri")' + CRLF
+    _script += 'vl00.set_num_format("#,##0")' + CRLF
+    _script += CRLF
+    _script += 'vl02 = workbook.add_format()' + CRLF
+    _script += 'vl02.set_border(1)' + CRLF
+    _script += 'vl02.set_border_color("#BFBFBF")' + CRLF
+    _script += 'vl02.set_font_size(11)' + CRLF
+    _script += 'vl02.set_font_name("Calibri")' + CRLF
+    _script += 'vl02.set_num_format("#,##0.00")' + CRLF
+    _script += CRLF
+    _script += 'vl04 = workbook.add_format()' + CRLF
+    _script += 'vl04.set_border(1)' + CRLF
+    _script += 'vl04.set_border_color("#BFBFBF")' + CRLF
+    _script += 'vl04.set_font_size(11)' + CRLF
+    _script += 'vl04.set_font_name("Calibri")' + CRLF
+    _script += 'vl04.set_num_format("#,##0.0000")' + CRLF
+    _script += CRLF
+    _script += CRLF
+
+    _script += 'cabec = ('
+    
+    FOR C := 1 TO LEN(jDados["header"])
+        _script += '"' + jDados["header"][C] + '"'
+        _script += IIF(C<LEN(jDados["header"]),', ','')
+    NEXT C
+
+    _script += ')' + CRLF
+    _script += CRLF
+
+    _script += 'worksheet.write_row("A1", cabec, titulos)' + CRLF
+    _script += CRLF
+
+    // FORCA A GRAVACAO
+    zoClsFun():WriteTxt(_pyFile, ENCODEUTF8(_script))
+    _script := ''
+
+    _script += 'data = ('
+
+    FOR L :=  1 TO LEN(jDados["itens"])
+        _script += '['
+
+        FOR C := 1 TO LEN(jDados["campos"])
+            
+            IF jDados["formato"][C] == "str"
+                _script += '"' + ENCODEUTF8(ALLTRIM(jDados["itens"][L][jDados["campos"][C]])) + '"'
+
+            ELSEIF jDados["formato"][C] == "dt"
+                _script += '"' + PythonDate(jDados["itens"][L][jDados["campos"][C]]) + '"'
+
+            ELSEIF LEFT(jDados["formato"][C],2) == "vl"
+                _script += CVALTOCHAR(jDados["itens"][L][jDados["campos"][C]])
+
+            ELSE
+                _script += '"' + ENCODEUTF8(ALLTRIM(ASSTRING(jDados["itens"][L][jDados["campos"][C]]))) + '"'
+            ENDIF
+
+            IF C < LEN(jDados["campos"])
+                _script += ', '
+            ENDIF
+
+        NEXT C
+
+        _script += '],' + CRLF
+
+        IF LEN(_script) > 32000
+            zoClsFun():WriteTxt(_pyFile, _script)
+            _script := ''
+        ENDIF
+    NEXT L
+
+    _script += ')' + CRLF
+    _script += CRLF
+    _script += 'row = 1' + CRLF
+    _script += CRLF
+	_script += 'for i in range(len(data)):' + CRLF
+
+    FOR C := 1 TO LEN(jDados["campos"])
+        _coluna := CVALTOCHAR(C-1)
+
+        IF jDados["formato"][C] == "dt"
+            _script += '    worksheet.write(row + i, ' + _coluna + ', datetime.datetime.strptime(data[i][' + _coluna + '], "%Y-%m-%d"), dt)' + CRLF
+        ELSE
+		    _script += '    worksheet.write(row + i, ' + _coluna + ', data[i][' + _coluna + '], ' + jDados["formato"][C] + ')' + CRLF
+        ENDIF
+
+        IF LEN(_script) > 32000
+            zoClsFun():WriteTxt(_pyFile, _script)
+            _script := ''
+        ENDIF
+	NEXT C
+
+    _script += CRLF
+    _script += 'workbook.close()' + CRLF
+
+    zoClsFun():WriteTxt(_pyFile, _script)
+
+    // -----------------------------------------------------------------------------------
+	// GERA O SCRIPT BAT
+	// -----------------------------------------------------------------------------------
+    _script := '"' + _pythonPath + '" "' + _rootPath + _pyFile + '"'
+    zoClsFun():WriteTxt(_batFile, _script)
+
+    // -----------------------------------------------------------------------------------
+	// EXECUTA O BAT QUE VAI EXECUTAR O SCRIPT PYTHON
+	// -----------------------------------------------------------------------------------
+	WAITRUNSRV(_rootPath + _batFile, .T., "C:\")
+
+    // -----------------------------------------------------------------------------------
+	// VERIFICA SE O ARQUIVO FOI CRIADO
+	// -----------------------------------------------------------------------------------
+    FOR L := 1 TO 15
+        IF FILE(_xlsxFile)
+            EXIT
+        ELSE
+            SLEEP(1000)
+        ENDIF
+    NEXT L
+
+    // -----------------------------------------------------------------------------------
+	// VERIFICA SE O ARQUIVO FOI CRIADO E COPIA PARA A PASTA QUE O USUARIO ESCOLHEU
+	// -----------------------------------------------------------------------------------
+    IF FILE(_xlsxFile)
+        CPYS2T(_xlsxFile, _pastaExcel)
+
+        IF FILE(_pastaExcel + zoClsFun():JustFileName(_xlsxFile))
+            FRENAME(_pastaExcel + zoClsFun():JustFileName(_xlsxFile), _userFile)
+
+            FWALERTSUCCESS("Arquivo Excel gerado com sucesso!", "Estoque Excel")
+        ELSE
+            FWALERTERROR("Ocorreu algum problema com a geracao da planilha....", "[ERRO]")
+        ENDIF
+    ELSE
+        FWALERTERROR("Ocorreu algum problema com a geracao da planilha...", "[ERRO]")
+    ENDIF
+
+    // -----------------------------------------------------------------------------------
+	// APAGA OS ARQUIVOS GERADOS
+	// -----------------------------------------------------------------------------------
+    // FERASE(_xlsxFile)
+    // FERASE(_batFile)
+    // FERASE(_pyFile)
+
+RETURN
+
+/* ---------------------------------------------------------------------------------------------------------
+Função    : BuscaDados
+Descrição : Executa query para buscar os dados e retorna um array com o resultado
+--------------------------------------------------------------------------------------------------------- */
+STATIC FUNCTION BuscaDados(aParam)
+    LOCAL J        := 0
+    LOCAL C        := 0
+    LOCAL jQuery   := JsonObject():New()
+    LOCAL cQuery   := ""
+    LOCAL cAlias   := GETNEXTALIAS()
+    LOCAL nTipoMov := aParam[03]
+
+    jQuery["dados"] := {}
+
+    cQuery += "SELECT" + CRLF
+
+    IF nTipoMov == 1
+        cQuery += "    FT_FILIAL, FT_ENTRADA, FT_EMISSAO, FT_NFISCAL, FT_SERIE, FT_ESPECIE, FT_CLIEFOR, FT_LOJA, A2_NOME [RSOCIAL], A2_CGC [CGC], FT_ESTADO, " + CRLF
+    ELSE
+        cQuery += "    FT_FILIAL, FT_ENTRADA, FT_EMISSAO, FT_NFISCAL, FT_SERIE, FT_ESPECIE, FT_CLIEFOR, FT_LOJA, A1_NOME [RSOCIAL], A1_CGC [CGC], FT_ESTADO, " + CRLF
+    ENDIF
+
+    cQuery += "    FT_VALCONT, FT_CFOP, " + CRLF
+    cQuery += "    FT_BASEICM, FT_ALIQICM, FT_VALICM, FT_ISENICM, FT_OUTRICM," + CRLF
+    cQuery += "    FT_BASEIPI, FT_ALIQIPI, FT_VALIPI, FT_ISENIPI, FT_OUTRIPI, " + CRLF
+
+    IF nTipoMov == 1
+        cQuery += "    FT_CHVNFE, FT_ITEM, FT_PRODUTO, FT_TES, B1_CONTA [CONTACTB], FT_CONTA, D1_CC [CCUSTO]" + CRLF
+    ELSE
+        cQuery += "    FT_CHVNFE, FT_ITEM, FT_PRODUTO, FT_TES, B1_CONTA [CONTACTB], FT_CONTA, D2_CCUSTO [CCUSTO]" + CRLF
+    ENDIF
+
+    cQuery += "FROM " + RETSQLNAME("SFT") + " FT " + CRLF
+    
+    IF nTipoMov == 1
+        cQuery += "    INNER JOIN " + RETSQLNAME("SA2") + " A2 ON A2_COD = FT_CLIEFOR AND A2_LOJA = FT_LOJA AND A2.D_E_L_E_T_ = ''" + CRLF
+        cQuery += "    INNER JOIN " + RETSQLNAME("SD1") + " D1 ON" + CRLF
+        cQuery += "            D1_FILIAL = FT_FILIAL " + CRLF
+        cQuery += "            AND D1_DOC = FT_NFISCAL " + CRLF
+        cQuery += "            AND D1_SERIE = FT_SERIE " + CRLF
+        cQuery += "            AND D1_FORNECE = FT_CLIEFOR " + CRLF
+        cQuery += "            AND D1_LOJA = FT_LOJA " + CRLF
+        cQuery += "            AND D1_ITEM = FT_ITEM" + CRLF
+        cQuery += "            AND D1.D_E_L_E_T_ = ''" + CRLF
+    ELSE
+        cQuery += "    INNER JOIN " + RETSQLNAME("SA1") + " A1 ON A1_COD = FT_CLIEFOR AND A1_LOJA = FT_LOJA AND A1.D_E_L_E_T_ = ''" + CRLF
+        cQuery += "    INNER JOIN " + RETSQLNAME("SD2") + " D2 ON" + CRLF
+        cQuery += "            D2_FILIAL = FT_FILIAL " + CRLF
+        cQuery += "            AND D2_DOC = FT_NFISCAL " + CRLF
+        cQuery += "            AND D2_SERIE = FT_SERIE " + CRLF
+        cQuery += "            AND D2_CLIENTE = FT_CLIEFOR " + CRLF
+        cQuery += "            AND D2_LOJA = FT_LOJA " + CRLF
+        cQuery += "            AND D2_ITEM = FT_ITEM" + CRLF
+        cQuery += "            AND D2.D_E_L_E_T_ = ''" + CRLF
+    ENDIF
+    cQuery += "    INNER JOIN " + RETSQLNAME("SB1") + " B1 ON B1_COD = FT_PRODUTO AND B1.D_E_L_E_T_ = ''" + CRLF
+
+    cQuery += "WHERE" + CRLF
+    cQuery += "    FT_FILIAL = '" + XFILIAL("SFT") + "'" + CRLF
+
+    IF nTipoMov == 1
+        cQuery += "    AND FT_TIPOMOV = 'E' " + CRLF
+    ELSE
+        cQuery += "    AND FT_TIPOMOV = 'S' " + CRLF
+    ENDIF
+
+    cQuery += "    AND FT_ENTRADA BETWEEN '" + DTOS(aParam[01]) + "' AND '" + DTOS(aParam[02]) + "'" + CRLF
+    cQuery += "    AND FT.D_E_L_E_T_ = ''" + CRLF
+    cQuery += "ORDER BY" + CRLF
+    cQuery += "    FT_FILIAL, FT_NFISCAL, FT_SERIE, FT_CLIEFOR, FT_LOJA, FT_ITEM" + CRLF
+
+    MpSysOpenQuery(cQuery,cAlias)
+
+    IF !(cAlias)->(EOF())
+        WHILE !(cAlias)->(EOF())
+            AADD(jQuery["dados"],JsonObject():New())
+            J := LEN(jQuery["dados"])
+
+            FOR C :=  1 TO (cAlias)->(FCOUNT())
+                jQuery["dados"][J][(cAlias)->(FIELDNAME(C))] := (cAlias)->(FIELDGET(C))
+            NEXT C
+
+            (cAlias)->(DBSKIP())
+        END
+    ENDIF
+
+    IF SELECT(cAlias) > 0
+        (cAlias)->(DBCLOSEAREA())
+    ENDIF
+RETURN jQuery["dados"]
+
+/* ---------------------------------------------------------------------------------------------------------
+Função    : PythonDate
+Descrição : Converte a string para o formato de data do python
+            poderia usar a TRANSFORM(_varData, "@R 9999-99-99"), mas eu so lembrei depois
+--------------------------------------------------------------------------------------------------------- */
+STATIC FUNCTION PythonDate(_varData)
+RETURN LEFT(_varData,4) + "-" + SUBS(_varData,5,2) + "-" + RIGHT(_varData,2)
