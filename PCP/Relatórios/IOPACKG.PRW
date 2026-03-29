@@ -5,10 +5,11 @@
 _____________________________________________________________________________
 ¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦
 ¦¦+-----------------------------------------------------------------------+¦¦
-¦¦¦Programa  ¦ IOPEXCL  ¦ Autor ¦  Fábrica ERP.BR   ¦ Data ¦  Nov/2024    ¦¦¦
+¦¦¦Programa  ¦ IOPACKG  ¦ Autor ¦  Fábrica ERP.BR   ¦ Data ¦  Mar/2026    ¦¦¦
 ¦¦+----------+------------------------------------------------------------¦¦¦
-¦¦¦Descricao ¦ Chamada exclusiva para impressão da ordem de produção      ¦¦¦
-¦¦¦          ¦ modelo específico Pdf.							  		  ¦¦¦
+¦¦¦Descricao ¦ Chamada exclusiva para impressão do Packing List.	      ¦¦¦
+¦¦¦          ¦ Base: Ordem de Produção.							  		  ¦¦¦
+¦¦¦          ¦ Formato: PDF.									  		  ¦¦¦
 ¦¦+----------+------------------------------------------------------------¦¦¦
 ¦¦¦Uso       ¦ Exclusivo INTRALOX 										  ¦¦¦
 ¦¦+----------+------------------------------------------------------------¦¦¦
@@ -16,7 +17,7 @@ _____________________________________________________________________________
 ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
 /*/
 
-User Function IOPEXCL(lOpen)
+User Function IOPACKG(lOpen)
 
 Local aOrdPrd := {}
 Local aOrdTmp := {}
@@ -31,7 +32,7 @@ If !(FWCodEmp() $("99,U6"))
 	Return
 Endif
 
-If !MsgYesNo("Deseja imprimir o Pick-List de separação para a Ordem de Produção "+SC2->(C2_NUM+C2_ITEM+C2_SEQUEN)+" ?","Aviso")
+If !MsgYesNo("Deseja imprimir o Packing-List para a Ordem de Produção "+SC2->(C2_NUM+C2_ITEM+C2_SEQUEN)+" ?","Aviso")
 	Return
 Endif
 
@@ -155,14 +156,22 @@ While !Eof()
 	cQuery += " ORDER BY D1_DTDIGIT DESC "
 	DbUseArea( .T., "TOPCONN", TCGENQRY(,,cQuery),"SQL1", .F., .T.)
 
-	cFornec := "FORNECEDOR COMPRA"
+	cFornec := ""
+	cPrdFor := ""
 	DbSelectArea("SQL1")
 	SQL1->(DbGotop())
 	If !Eof()
+		//
 		DbSelectArea("SA2")
 		DbSetOrder(1)
 		DbSeek( xFilial("SA2") + SQL1->D1_FORNECE + SQL1->D1_LOJA )
-		cFornec := Substr(SA2->A2_NOME,1,20)
+		cFornec := AllTrim(Substr(SA2->A2_NOME,1,20))
+		//
+		DbSelectArea("SA5")
+		DbSetOrder(1)
+		If DbSeek( xFilial("SA5") + SA2->A2_COD + SA2->A2_LOJA + SQL4->D4_COD )
+			cPrdFor := AllTrim(SA5->A5_CODPRF)
+		Endif
 	Endif
 	SQL1->(DbCloseArea())
 
@@ -171,84 +180,38 @@ While !Eof()
 		cComplem := Posicione("SB1",1,xFilial("SB1")+SQL4->D4_COD,"B1_DESC")
 	Endif
 
-	cEndere := ""
-	DbSelectArea("SDC")
-	DbSetOrder(2)
-	If DbSeek( xFilial("SDC") + SQL4->D4_COD + SQL4->D4_LOCAL +SQL4->D4_OP )
-		While !Eof() .And. SDC->(DC_FILIAL+DC_PRODUTO+DC_LOCAL+DC_OP) == xFilial("SDC") + SQL4->D4_COD + SQL4->D4_LOCAL +SQL4->D4_OP
+	// Estrutura:
+	// [1]  - Cliente
+	// [2]  - Ordem Produção
+	// [3]  - Quantidade
+	// [4]  - Código Produto
+	// [5]  - Descrição Produto
+	// [6]  - Previsão Início
+	// [7]  - Data Conclusão
+	// [8]  - Seiban
+	// [9]  - Código Componente
+	// [10] - Descrição Componente
+	// [11] - Quantidade requerida
+	// [12] - Quantidade disponível
+	// [13] - Descrição complementar
+	// [14] - Fornecedor
+	// [15] - Código Produto no Fornecedor
 
-			// Estrutura:
-			// [1]  - Cliente
-			// [2]  - Ordem Produção
-			// [3]  - Quantidade
-			// [4]  - Código Produto
-			// [5]  - Descrição Produto
-			// [6]  - Previsão Início
-			// [7]  - Data Entrega
-			// [8]  - Seiban
-			// [9]  - Código Componente
-			// [10] - Descrição Componente
-			// [11] - Quantidade requerida
-			// [12] - Quantidade disponível
-			// [13] - Descrição complementar
-			// [14] - Fornecedor
-			// [15] - Endereço
-
-			AAdd(aOrdTmp,{ Substr(cNomCli,1,40),;
-						SC2->(C2_NUM+C2_ITEM+C2_SEQUEN),;
-						SC2->C2_QUANT,;
-						SC2->C2_PRODUTO,;
-						Posicione("SB1",1,xFilial("SB1")+SC2->C2_PRODUTO,"B1_DESC"),;
-						SC2->C2_DATPRI,;
-						SC2->C2_DATPRF,;
-						IIf( SC2->(FieldPos("C2_XSEIBAN")) > 0, SC2->C2_XSEIBAN, "#SEIBAN" ),;
-						SQL4->D4_COD,;
-						Posicione("SB1",1,xFilial("SB1")+SQL4->D4_COD,"B1_DESC"),;
-						SQL4->D4_QUANT,;
-						SB2->B2_QATU,;
-						cComplem,;
-						cFornec,;
-						SDC->DC_LOCALIZ })
-
-			DbSelectArea("SDC")
-			SDC->(DbSkip())
-		Enddo
-	Else
-
-		// Estrutura:
-		// [1]  - Cliente
-		// [2]  - Ordem Produção
-		// [3]  - Quantidade
-		// [4]  - Código Produto
-		// [5]  - Descrição Produto
-		// [6]  - Previsão Início
-		// [7]  - Data Entrega
-		// [8]  - Seiban
-		// [9]  - Código Componente
-		// [10] - Descrição Componente
-		// [11] - Quantidade requerida
-		// [12] - Quantidade disponível
-		// [13] - Descrição complementar
-		// [14] - Fornecedor
-		// [15] - Endereço
-
-		AAdd(aOrdTmp,{ Substr(cNomCli,1,40),;
-					SQL4->D4_OP,;
-					SC2->C2_QUANT,;
-					SC2->C2_PRODUTO,;
-					Posicione("SB1",1,xFilial("SB1")+SC2->C2_PRODUTO,"B1_DESC"),;
-					SC2->C2_DATPRI,;
-					SC2->C2_DATPRF,;
-					IIf( SC2->(FieldPos("C2_XSEIBAN")) > 0, SC2->C2_XSEIBAN, "#SEIBAN" ),;
-					SQL4->D4_COD,;
-					Posicione("SB1",1,xFilial("SB1")+SQL4->D4_COD,"B1_DESC"),;
-					SQL4->D4_QUANT,;
-					SB2->B2_QATU,;
-					cComplem,;
-					cFornec,;
-					"" })
-
-	Endif
+	AAdd(aOrdTmp,{ Substr(cNomCli,1,40),;
+				SQL4->D4_OP,;
+				SC2->C2_QUANT,;
+				SC2->C2_PRODUTO,;
+				Posicione("SB1",1,xFilial("SB1")+SC2->C2_PRODUTO,"B1_DESC"),;
+				SC2->C2_DATPRI,;
+				SC2->C2_DATRF,;
+				IIf( SC2->(FieldPos("C2_XSEIBAN")) > 0, SC2->C2_XSEIBAN, "#SEIBAN" ),;
+				SQL4->D4_COD,;
+				Posicione("SB1",1,xFilial("SB1")+SQL4->D4_COD,"B1_DESC"),;
+				SQL4->D4_QUANT,;
+				SB2->B2_QATU,;
+				cComplem,;
+				cFornec,;
+				cPrdFor })
 
 	DbSelectArea("SQL4")
 	SQL4->(DbSkip())
@@ -259,19 +222,6 @@ If Len(aOrdTmp) > 0
 
 	// Ordena por Endereço + Produto
 	aSort(aOrdTmp,,, { |x, y| x[15]+x[4] < y[15]+y[4] } ) 
-
-	// Adiciona os itens com Endereço
-	For _op := 1 to Len(aOrdTmp)
-		If !Empty( aOrdTmp[_op][15] )
-			nPos := aScan(aOrdPrd, {|x| x[9] == aOrdTmp[_op][9] .And. x[15] == aOrdTmp[_op][15]}) // Código Componente + Endereço
-			If nPos == 0
-				AAdd(aOrdPrd,{ aOrdTmp[_op][1], aOrdTmp[_op][2], aOrdTmp[_op][3], aOrdTmp[_op][4], aOrdTmp[_op][5], aOrdTmp[_op][6], aOrdTmp[_op][7], aOrdTmp[_op][8],;
-								aOrdTmp[_op][9], aOrdTmp[_op][10], aOrdTmp[_op][11], aOrdTmp[_op][12], aOrdTmp[_op][13], aOrdTmp[_op][14], aOrdTmp[_op][15] })
-			Else
-				aOrdPrd[nPos][11] += aOrdTmp[_op][11] // Quantidade requerida
-			Endif
-		Endif
-	Next _op
 
 	// Adiciona os itens sem Endereço
 	For _op := 1 to Len(aOrdTmp)
@@ -286,7 +236,7 @@ If Len(aOrdTmp) > 0
 		Endif
 	Next _op
 
-	FwMsgRun(, { || U_PDFORDP(aOrdPrd, cPath, lExibe) },,"Emitindo pick-list de separação")
+	FwMsgRun(, { || U_ITLXRPT(aOrdPrd, cPath, lExibe) },,"Emitindo packing list")
 
 Else
 	MsgAlert("Ordem de Produção não disponível para impressão.")

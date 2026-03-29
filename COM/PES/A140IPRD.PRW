@@ -115,8 +115,8 @@ If lImpXml .And. FWCodEmp() $("99,U6")
             DbSetOrder(1)
             If DbSeek( xFilial("SA2") + zCodigo + zLoja )
                 DbSelectArea("SA5")
-                DbSetOrder(1)
-                If !DbSeek( xFilial("SA5") + SA2->A2_COD + SA2->A2_LOJA + SB1->B1_COD )
+                DbSetOrder(1) // A5_FILIAL+A5_FORNECE+A5_LOJA+A5_PRODUTO+A5_FABR+A5_FALOJA+A5_REFGRD+A5_CODPRF
+                If !DbSeek( xFilial("SA5") + SA2->A2_COD + SA2->A2_LOJA + SB1->B1_COD + Space(TamSx3("A5_FABR")[1]) + Space(TamSx3("A5_FALOJA")[1]) + Space(TamSx3("A5_REFGRD")[1]) + PadR(zPrdFor,TamSx3("A5_CODPRF")[1]) )
                     RecLock("SA5",.T.)
                     SA5->A5_FILIAL	:= xFilial("SA5")
                     SA5->A5_FORNECE	:= SA2->A2_COD

@@ -188,8 +188,8 @@ if lCliente
 
    cCliente := CriaTrab(xCliente,.T.)
    if select("CLIENTE") > 0
-	 dbclosearea("CLIENTE")
- endif
+      CLIENTE->(Dbclosearea())
+   endif
 
    dbUseArea(.T.,,cCliente,"CLIENTE",.F.,.F.) // PARAMETRO 5-> ACESSO EXCLUSIVO AO ARQUIVO
    dbselectarea('CLIENTE')

@@ -1,29 +1,26 @@
-#include "protheus.ch"
-#include "totvs.ch"
+#include "Protheus.ch"
 
 /*/
 _____________________________________________________________________________
 ¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦
 ¦¦+-----------------------------------------------------------------------+¦¦
-¦¦¦Programa  ¦ MTA650MNU  ¦ Autor ¦ Fábrica ERPBR   ¦   Data  ¦ Nov/2024  ¦¦¦
+¦¦¦Programa  ¦ F430GRAFIL ¦ Autor ¦ Fábrica ERPBR   ¦   Data  ¦ Out/2023  ¦¦¦
 ¦¦+----------+------------------------------------------------------------¦¦¦
-¦¦¦Descricao ¦ Adiciona botões na tela da Ordem de Produção.			  ¦¦¦
+¦¦¦Descricao ¦ Ponto de Entrada para alterar a filial no DDA.             ¦¦¦
 ¦¦+----------+------------------------------------------------------------¦¦¦
-¦¦¦Uso       ¦ Exclusivo INTRALOX 										  ¦¦¦
+¦¦¦Uso       ¦ Exclusivo AFIP    										  ¦¦¦
 ¦¦+----------+------------------------------------------------------------¦¦¦
 ¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦
 ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
 /*/
 
-User Function MTA650MNU()
+User Function F430GRAFIL()
 
-Local aArea := GetArea()
+Local cFilOrig := PARAMIXB // Filial referente ao CNPJ (SM0->M0_CGC) do Header do arquivo
 
-If FWCodEmp() $("99,U6")
-	AAdd(aRotina,{"Pick-List Sep", "U_IOPEXCL(.T.)", 0, 3, 0, Nil})
-	AAdd(aRotina,{"Packing List" , "U_IOPACKG(.T.)", 0, 3, 0, Nil})
-Endif	
-
-RestArea(aArea)
-
+RecLock("FIG",.F.)
+FIG->FIG_FILIAL := xFilial("FIG",cFilOrig)
+FIG->FIG_FORPAG := IIf(Substr(FIG->FIG_CODBAR,1,3)==Substr(SEE->EE_CODIGO,1,3),"30","31") // Quando for BB testar com o parâmetro SX1 (mv_par05)
+FIG->(MsUnlock())
+ 
 Return

@@ -43,12 +43,12 @@ nDlg2 := 001
 nDlg3 := 210
 nDlg4 := 750
 
-oDlg410 := MsDialog():New(nDlg1,nDlg2,nDlg3,nDlg4,"Apontamento de PI",,,,,CLR_BLACK,CLR_WHITE,,,.T.)
+oDlg410 := MsDialog():New(nDlg1,nDlg2,nDlg3,nDlg4,"Apontamento de PI",,,,,,,,,.T.)
 
 @ 060,005 SAY "Ordem de Produção" OF oDlg410 PIXEL SIZE 055,009
 @ 059,060 MSGET oNumOpr VAR cNumOpr SIZE 060,010 OF oDlg410 PIXEL PICTURE "@!" F3 "SC2" VALID VldOpr()
 @ 059,120 TO 071,350 LABEL "" OF oDlg410 PIXEL
-oSayNew:= TSay():New(062,125,{||""},oDlg410,,oFnt2,,,,.T.,CLR_BLACK,CLR_WHITE,200,020)
+oSayNew:= TSay():New(062,125,{||""},oDlg410,,oFnt2,,,,.T.,,,200,020)
 oSayNew:SetText( AllTrim(cDesPro) )
 oSayNew:CtrlRefresh()
 

@@ -26,7 +26,7 @@ nDlg2 := 001
 nDlg3 := 170
 nDlg4 := 576
 
-DEFINE MSDIALOG oDlgDwn FROM nDlg1,nDlg2 TO nDlg3,nDlg4 TITLE "Gerador de Planilha CSV" OF oDlgDwn PIXEL
+DEFINE MSDIALOG oDlgDwn FROM nDlg1,nDlg2 TO nDlg3,nDlg4 TITLE "Gerador de Planilha CSV - v.082025" OF oDlgDwn PIXEL
 @ 042,105 RADIO oRadio1 VAR nRadio1 3D SIZE 70,11 PROMPT "Produtos","Estrutura","Ambos" OF oDlgDwn PIXEL
 ACTIVATE MSDIALOG oDlgDwn ON INIT EnchoiceBar(oDlgDwn,bOkDwn,bCanDwn) CENTERED
 
@@ -324,6 +324,7 @@ Local nCount := 0
 Local nLinha := 0
 Local lCabecArq := .T.
 Local aLastNiv  := {}
+Local aProdPai  := {}
 Local lTudOk    := .F.
 Local cInsep    := ""
 Private oTempTable
@@ -442,10 +443,18 @@ While ( !Empty((cString := fReadFile(nHandle,nTamArq,0,@nBytes))) )
 			cCodPai := ""
 			nNivFor := Val(cNivel)
 			While .T.
-				nNivFor  -= 1
+				nNivFor -= 1
 				cSeekNiv := AllTrim(STR(nNivFor))
 				nPos := aScan(aLastNiv, {|x| x[1] == cSeekNiv})
 				If nPos > 0
+					// 25/01/2026 V2
+					If Empty(cCodPai)
+						nPos1 := aScan(aProdPai, {|x| x[1] == aLastNiv[nPos][2]})
+						If nPos1 == 0
+							AAdd(aProdPai,{aLastNiv[nPos][2],.F.})
+						Endif
+					Endif
+					// 25/01/2026 V2
 					cCodPai += aLastNiv[nPos][2]
 				Endif
 				If nNivFor == 0
@@ -466,10 +475,28 @@ While ( !Empty((cString := fReadFile(nHandle,nTamArq,0,@nBytes))) )
 			TMP->TM_QUANT  := nQuant
 			MsUnLock()
 		Else
-			If Empty(cCodPai)
-				RecLock("TMP",.F.)
-				TMP->TM_QUANT += nQuant
-				MsUnLock()
+			If Empty(cCodPai) .Or. cNivel >= "1"
+				// 25/01/2026 V2
+				cNivAnt := Substr(cCodPai,1,TamSx3("B1_COD")[1])
+				nPosPai := aScan(aProdPai, {|x| x[1] == cNivAnt})
+				lSomaQt := .T.
+				If nPosPai > 0
+					If aProdPai[nPosPai][2]
+						lSomaQt := .F.
+					Endif
+				Endif
+				If lSomaQt
+					// 25/01/2026 V2
+					RecLock("TMP",.F.)
+					TMP->TM_QUANT += nQuant
+					MsUnLock()
+				Endif
+				// 25/01/2026 V2
+				nPos1 := aScan(aProdPai, {|x| x[1] == cProdu})
+				If nPos1 > 0
+					aProdPai[nPos1][2] := .T.
+				Endif
+				// 25/01/2026 V2
 			Endif	
 		Endif
 		//TMP->TM_QUANT += nQuant

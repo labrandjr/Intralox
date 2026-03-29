@@ -178,16 +178,15 @@ Return&(cPanel)
 *------------------------------*
 Static Function ShowItem(cItem)
 *------------------------------*
-Local nPos	:= 0 
+Local i 
 
 for i:=1 to len(aPanel)
-	
 	if aPanel[i]:cReadVar==cItem
 		aPanel[i]:Show()
 	else
 		aPanel[i]:Hide()
 	endif
-next
+next i
 
 Return
 
@@ -292,14 +291,6 @@ Local oChkSG1
 Local cLocaSC5:="V:\Team\EBS Shared Prod\receivables\Brasil\ORDERS\ORDERS.TXT"
 Local oGetSC5
 Local oChkSC5
-
-Local oGetSB12
-Local oChkSB12
-Local cLocaSB12:=""
-
-Local oGetSGG
-Local oChkSGG
-Local cLocaSGG:=""
 
 oFontBtn:= TFont():New('Arial',,-16,.T.,.F.)
 
@@ -563,10 +554,8 @@ if !lTemMak
 endif
 
 if lRet
-
 	
-	SEndMail(,,,aFiles)	
-
+	//SEndMail(,,,aFiles)	
 
 	AVISO("Concluído", "Fim do processamento do(s) arquivo(s), verifique os log(s)", { "OK"}, 1)	 
 		
@@ -583,7 +572,6 @@ Static Function fAbreCsv(cGet,oGet)
 
 Local cTitle		:= "Salvar arquivo"
 Local cFile 		:= "Arq.csv  | *.csv"
-Local cPastaTo    	:= ""
 Local nDefaultMask 	:= 1
 Local cDefaultDir  	:= "C:\"
 Local nOptions		:= GETF_LOCALHARD + GETF_LOCALFLOPPY
@@ -614,7 +602,6 @@ Static Function AbreArq(cGet,oGet)
 *----------------------------------*
 Local cTitle		:= "Salvar arquivo"
 Local cFile 		:= "Arq.txt  | *.txt"
-Local cPastaTo    	:= ""
 Local nDefaultMask 	:= 1
 Local cDefaultDir  	:= "C:\"
 Local nOptions		:= GETF_LOCALHARD + GETF_LOCALFLOPPY
@@ -645,7 +632,6 @@ Static Function AbreCSV(cGet,oGet)
 *----------------------------------*
 Local cTitle		:= "Salvar arquivo"
 Local cFile 		:= "Arq.csv  | *.csv"
-Local cPastaTo    	:= ""
 Local nDefaultMask 	:= 1
 Local cDefaultDir  	:= "C:\"
 Local nOptions		:= GETF_LOCALHARD + GETF_LOCALFLOPPY
@@ -667,23 +653,21 @@ Return
 *------------------------------*
 Static Function TlProd(oLocal)
 *------------------------------*
-Local oTBtnBmp1,oTBar
 
 // Define o Browse	
-DEFINE FWBROWSE oBrowP DATA TABLE ALIAS "TRBSB1" OF oLocal			
+DEFINE FWBROWSE oBrowP DATA TABLE ALIAS "TRBSB1" OF oLocal
 
 //Adiciona coluna para marcar e desmarcar
-ADD MARKCOLUMN 		oColumn DATA { || If(LSTATUS,"BR_VERDE","BR_VERMELHO") } DOUBLECLICK { |oBrowP| /* Função que atualiza a regra*/ }  OF oBrowP
+ADD MARKCOLUMN oColumn DATA { || If(LSTATUS,"BR_VERDE","BR_VERMELHO") } DOUBLECLICK { |oBrowP| .T. }  OF oBrowP
 
 // Adiciona as colunas do Browse	   	
-ADD COLUMN oColumn DATA { || ID			} TITLE "Código"   			DOUBLECLICK  {||  			}	ALIGN 1 SIZE 06 OF oBrowP		
-//ADD COLUMN oColumn DATA { || TAB	   	} TITLE "Tabela"			DOUBLECLICK  {||  			}	ALIGN 1 SIZE 3 OF oBrowP		
-ADD COLUMN oColumn DATA { || USUARIO   	} TITLE "Usuário"			DOUBLECLICK  {||  			}	ALIGN 1 SIZE 20 OF oBrowP		
-ADD COLUMN oColumn DATA { || DATAGE    	} TITLE "Data"				DOUBLECLICK  {|| 			} 	ALIGN 1 SIZE 08 OF oBrowP	
-ADD COLUMN oColumn DATA { || HORA    	} TITLE "Hora"				DOUBLECLICK  {|| 			} 	ALIGN 1 SIZE 10 OF oBrowP	
-ADD COLUMN oColumn DATA { || ARQUIVO   	} TITLE "Arquivo"			DOUBLECLICK  {|| 			} 	ALIGN 1 SIZE 40 OF oBrowP	
-ADD COLUMN oColumn DATA { || LINHA  	} TITLE "Linha"				DOUBLECLICK  {|| 			} 	ALIGN 1 SIZE 20 OF oBrowP	
-ADD COLUMN oColumn DATA { || LOG    	} TITLE "Log"				DOUBLECLICK  {|| 			} 	ALIGN 1 SIZE 200 OF oBrowP	
+ADD COLUMN oColumn DATA { || ID			} TITLE "Código"  	DOUBLECLICK  {|| .T. } ALIGN 1 SIZE 06 OF oBrowP		
+ADD COLUMN oColumn DATA { || USUARIO   	} TITLE "Usuário"	DOUBLECLICK  {|| .T. } ALIGN 1 SIZE 20 OF oBrowP		
+ADD COLUMN oColumn DATA { || DATAGE    	} TITLE "Data"		DOUBLECLICK  {|| .T. } ALIGN 1 SIZE 08 OF oBrowP	
+ADD COLUMN oColumn DATA { || HORA    	} TITLE "Hora"		DOUBLECLICK  {|| .T. } ALIGN 1 SIZE 10 OF oBrowP	
+ADD COLUMN oColumn DATA { || ARQUIVO   	} TITLE "Arquivo"	DOUBLECLICK  {|| .T. } ALIGN 1 SIZE 40 OF oBrowP	
+ADD COLUMN oColumn DATA { || LINHA  	} TITLE "Linha"		DOUBLECLICK  {|| .T. } ALIGN 1 SIZE 20 OF oBrowP	
+ADD COLUMN oColumn DATA { || LOG    	} TITLE "Log"		DOUBLECLICK  {|| .T. } ALIGN 1 SIZE 200 OF oBrowP	
 
 oBrowP:SetFilterDefault('TAB == "SB1"')
 
@@ -697,17 +681,15 @@ Return
 *------------------------------*
 Static Function TlClie(oLocal)
 *------------------------------*
-Local oTBtnBmp1,oTBar
 
 // Define o Browse	
 DEFINE FWBROWSE oBrowC DATA TABLE ALIAS "TRBSA1" OF oLocal			
 
 //Adiciona coluna para marcar e desmarcar
-ADD MARKCOLUMN 		oColumn DATA { || If(LSTATUS,"BR_VERDE","BR_VERMELHO") } DOUBLECLICK { |oBrowC| /* Função que atualiza a regra*/ }  OF oBrowC
+ADD MARKCOLUMN oColumn DATA { || If(LSTATUS,"BR_VERDE","BR_VERMELHO") } DOUBLECLICK { |oBrowC| /* Função que atualiza a regra*/ }  OF oBrowC
 
 // Adiciona as colunas do Browse	   	
 ADD COLUMN oColumn DATA { || ID			} TITLE "Código"   			DOUBLECLICK  {||  			}	ALIGN 1 SIZE 06 OF oBrowC		
-//ADD COLUMN oColumn DATA { || TAB	   	} TITLE "Tabela"			DOUBLECLICK  {||  			}	ALIGN 1 SIZE 3 OF oBrowC		
 ADD COLUMN oColumn DATA { || USUARIO   	} TITLE "Usuário"			DOUBLECLICK  {||  			}	ALIGN 1 SIZE 20 OF oBrowC		
 ADD COLUMN oColumn DATA { || DATAGE    	} TITLE "Data"				DOUBLECLICK  {|| 			} 	ALIGN 1 SIZE 08 OF oBrowC	
 ADD COLUMN oColumn DATA { || HORA    	} TITLE "Hora"				DOUBLECLICK  {|| 			} 	ALIGN 1 SIZE 10 OF oBrowC	
@@ -736,7 +718,6 @@ ADD MARKCOLUMN 		oColumn DATA { || If(LSTATUS,"BR_VERDE","BR_VERMELHO") } DOUBLE
 
 // Adiciona as colunas do Browse	   	
 ADD COLUMN oColumn DATA { || ID			} TITLE "Código"   			DOUBLECLICK  {||  			}	ALIGN 1 SIZE 06 OF oBrowE		
-//ADD COLUMN oColumn DATA { || TAB	   	} TITLE "Tabela"			DOUBLECLICK  {||  			}	ALIGN 1 SIZE 3 OF oBrowE		
 ADD COLUMN oColumn DATA { || USUARIO   	} TITLE "Usuário"			DOUBLECLICK  {||  			}	ALIGN 1 SIZE 20 OF oBrowE		
 ADD COLUMN oColumn DATA { || DATAGE    	} TITLE "Data"				DOUBLECLICK  {|| 			} 	ALIGN 1 SIZE 08 OF oBrowE	
 ADD COLUMN oColumn DATA { || HORA    	} TITLE "Hora"				DOUBLECLICK  {|| 			} 	ALIGN 1 SIZE 10 OF oBrowE	
@@ -756,7 +737,6 @@ Return
 *------------------------------*
 Static Function TlPedi(oLocal)
 *------------------------------*
-Local oTBtnBmp1,oTBar
 
 // Define o Browse	
 DEFINE FWBROWSE oBrowV DATA TABLE ALIAS "TRBSC5" OF oLocal			
@@ -887,21 +867,18 @@ DO CASE
 		            {"C6_DESCR01","C",150,0},;
 		            {"80"	 ,"C", 10,0}}
 						
-ENDCASE
+EndCase
 
-	//Cria o temporário
-	cArqTrab := CriaTrab(aCampos,.t.)   
-	dbUseArea(.t.,,cArqTrab,"XXX",.F.,.F.) 
-	cArqTemp := CriaTrab(nil,.F.)
-	IndRegua("XXX", cArqTemp, (aCampos[1][1]),,,"Selecionando Registros ...",.T.)// Criando Índice Temporário
-	
-	append from (cArq) SDF
+// Cria o temporário
+cArqTrab := CriaTrab(aCampos,.t.)   
+dbUseArea(.t.,,cArqTrab,"XXX",.F.,.F.) 
+cArqTemp := CriaTrab(nil,.F.)
+IndRegua("XXX", cArqTemp, (aCampos[1][1]),,,"Selecionando Registros ...",.T.)// Criando Índice Temporário
 
-//V2_Prod(cArq)
+append from (cArq) SDF
 
 nTotLin:= XXX->(RecCount())
 nAumenta:= (100/(nTotLin-2)) //( 100/(nTotLin-2) / 2)
-
 
 DO CASE
 	CASE cTab == "SG1"
@@ -917,7 +894,6 @@ DO CASE
 		lRet:=ExecAut(aCampos,cArq,cTab)//Chamada da função de execauto.
 ENDCASE
 
-	
 Return(lRet)
 
 // Wederson L. Santana
@@ -2504,7 +2480,7 @@ RETURN .T.
 
 
 *---------------------------------------------------------------------*
-Static Function SEndMail(cPara,cAssunto,cTexto,aFiles)
+Static Function SendMail(cPara,cAssunto,cTexto,aFiles)
 *---------------------------------------------------------------------*
 Local lRetMail 		:= .T.
 Local oMessage
@@ -2661,8 +2637,6 @@ cArqTemp := CriaTrab(nil,.F.)
 IndRegua("XXX", cArqTemp, (aCampos[1][1]),,,"Selecionando Registros ...",.T.)// Criando Índice Temporário
 
 append from (cArq) SDF
-
-
 
 Return 
 /*

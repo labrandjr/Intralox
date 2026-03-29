@@ -4,12 +4,54 @@
 		{
 			"type": "totvs_language_debug",
 			"request": "launch",
-			"name": "TOTVS Language Debug",
+			"name": "Debug Intralox Desktop",
 			"program": "${command:AskForProgramName}",
 			"cwb": "${workspaceFolder}",
-			"smartclientBin": "C:\\smartclient\\conasa\\smartclient\\smartclient.exe",
+			"smartclientBin": "C:\\smartclient\\intralox\\cloud-totvs\\smartclient_dev\\smartclient.exe",
 			"isMultiSession": true,
 			"enableTableSync": true,
+			"extendFeatures": {
+				"charDetails": false
+			}
+		},
+		{
+			"type": "totvs_language_web_debug",
+			"request": "launch",
+			"name": "Debug Intralox WebApp Dev",
+			"program": "${command:AskForProgramName}",
+			"cwb": "${workspaceFolder}",
+			"smartclientUrl": "https://intraloxbrasil197235.protheus.cloudtotvs.com.br:10671/webapp/",
+			"isMultiSession": true,
+			"enableTableSync": true,
+			"enableMultiThread": true,
+			"extendFeatures": {
+				"charDetails": false
+			}
+		},
+		{
+			"type": "totvs_language_web_debug",
+			"request": "launch",
+			"name": "Debug Intralox WebApp Prd",
+			"program": "${command:AskForProgramName}",
+			"cwb": "${workspaceFolder}",
+			"smartclientUrl": "https://intraloxbrasil197234.protheus.cloudtotvs.com.br:10615/webapp/",
+			"isMultiSession": true,
+			"enableTableSync": true,
+			"enableMultiThread": true,
+			"extendFeatures": {
+				"charDetails": false
+			}
+		},
+		{
+			"type": "totvs_language_web_debug",
+			"request": "launch",
+			"name": "Debug Local WebApp",
+			"program": "${command:AskForProgramName}",
+			"cwb": "${workspaceFolder}",
+			"smartclientUrl": "http://localhost:2323/webapp/",
+			"isMultiSession": true,
+			"enableTableSync": true,
+			"enableMultiThread": true,
 			"extendFeatures": {
 				"charDetails": false
 			}
@@ -18,6 +60,15 @@
 	"lastPrograms": [
 		{
 			"label": "SIGAPCP"
+		},
+		{
+			"label": "SIGACOM"
+		},
+		{
+			"label": "SIGAEST"
+		},
+		{
+			"label": "SIGAFAT"
 		}
 	],
 	"lastProgramExecuted": "SIGAPCP"
